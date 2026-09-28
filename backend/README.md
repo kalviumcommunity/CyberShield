@@ -42,13 +42,13 @@ CyberShield is a cybersecurity mitigation retrieval platform designed to allow s
 ## Database Configuration & Initialization
 
 ### Initialize Database Tables
-To create all database tables (`users`, `documents`, `document_chunks`, `alerts`, `mitigation_results`), run:
+To create all database tables (`users`, `documents`, `document_chunks`, `alerts`, `mitigation_results`), execute:
 ```bash
 python -m app.init_db
 ```
 
 ### Test Database Connection
-To test PostgreSQL connection and verify table schema creation:
+To verify PostgreSQL connection and test schema creation:
 ```bash
 python -m app.test_db
 ```
