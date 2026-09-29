@@ -1,12 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import settings
 from app.database import Base, engine
-from app.routes import health
+from app.routes import documents, health
 
 # Ensure all database tables exist on startup
 Base.metadata.create_all(bind=engine)
+try:
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS content TEXT;"))
+except Exception as e:
+    print(f"Schema auto-update note: {e}")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -25,8 +31,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register API routes
+# Register API routes (support both /api and /api/v1 prefixes)
 app.include_router(health.router, prefix="/api/v1")
+app.include_router(health.router, prefix="/api")
+
+app.include_router(documents.router, prefix="/api")
+app.include_router(documents.router, prefix="/api/v1")
 
 
 @app.get("/")
