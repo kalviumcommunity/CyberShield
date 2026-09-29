@@ -243,6 +243,13 @@ def generate_document_embeddings(
 
     db.commit()
 
+    # 6. Keep FAISS vector search index up to date
+    try:
+        from app.services.vector_search_service import get_vector_search_service
+        get_vector_search_service().rebuild_index(db)
+    except Exception as e:
+        print(f"Notice: FAISS index update after embed: {e}")
+
     return DocumentEmbedResponse(
         document_id=document_id,
         chunks_embedded=len(chunks),

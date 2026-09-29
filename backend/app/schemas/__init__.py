@@ -9,6 +9,11 @@ from app.schemas.document import (
     DocumentChunkResponse,
     DocumentEmbedResponse,
 )
+from app.schemas.search import (
+    SearchResultItem,
+    SearchResponse,
+    SearchRebuildResponse,
+)
 
 __all__ = [
     "HealthCheckResponse",
@@ -17,4 +22,7 @@ __all__ = [
     "DocumentProcessResponse",
     "DocumentChunkResponse",
     "DocumentEmbedResponse",
+    "SearchResultItem",
+    "SearchResponse",
+    "SearchRebuildResponse",
 ]
