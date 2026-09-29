@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_current_user
+from app.models import User
 from app.schemas.mitigation import MitigationSearchRequest, MitigationSearchResponse
 from app.schemas.rag import MitigationAnswerRequest, MitigationAnswerResponse
 from app.services.mitigation_service import get_mitigation_service
@@ -17,6 +19,7 @@ router = APIRouter(prefix="/mitigation", tags=["Mitigation Retrieval"])
 def retrieve_mitigations(
     request: MitigationSearchRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Search and retrieve verbatim cybersecurity mitigation steps for an active security alert.
@@ -76,6 +79,7 @@ def retrieve_mitigations(
 def answer_mitigation(
     request: MitigationAnswerRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Generates a concise, grounded mitigation answer for an active security alert using RAG.

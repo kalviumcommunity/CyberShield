@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_current_user, require_admin
+from app.models import User
 from app.schemas.search import SearchRebuildResponse, SearchResultItem
 from app.services.vector_search_service import get_vector_search_service
 
@@ -18,6 +20,7 @@ def search_documents(
     q: Optional[str] = Query(None, description="Security alert or mitigation query"),
     top_k: int = Query(5, description="Number of relevant document chunks to return (1-100)"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Search document chunks semantically using FAISS vector similarity.
@@ -71,6 +74,7 @@ def search_documents(
 def rebuild_search_index(
     auto_embed: bool = Query(False, description="Automatically embed any unembedded chunks before rebuilding"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     """
     Rebuilds the in-memory FAISS vector index from all document chunk embeddings stored in PostgreSQL.

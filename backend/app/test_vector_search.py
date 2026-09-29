@@ -287,9 +287,12 @@ def test_api_search_endpoint():
     Test 6: Test GET /api/search?q=<query>&top_k=5 API endpoint and query validation.
     """
     print("\n--- Test 6: API Endpoint GET /api/search Validation & Results ---")
+    login_resp = client.post("/api/auth/login", json={"email": "analyst@cybershield.io", "password": "AnalystPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Valid search
-    resp = client.get("/api/search?q=How%20do%20I%20isolate%20a%20compromised%20endpoint?&top_k=3")
+    resp = client.get("/api/search?q=How%20do%20I%20isolate%20a%20compromised%20endpoint?&top_k=3", headers=headers)
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
     data = resp.json()
     assert isinstance(data, list)
@@ -304,27 +307,27 @@ def test_api_search_endpoint():
     print("[PASS] GET /api/search returned valid JSON list with required fields.")
 
     # 2. Empty query validation (empty string)
-    empty_resp = client.get("/api/search?q=")
+    empty_resp = client.get("/api/search?q=", headers=headers)
     assert empty_resp.status_code == 400, f"Expected 400 for empty query, got {empty_resp.status_code}"
     print("[PASS] Empty query correctly rejected with 400 Bad Request.")
 
     # 3. Whitespace query validation
-    ws_resp = client.get("/api/search?q=%20%20%20")
+    ws_resp = client.get("/api/search?q=%20%20%20", headers=headers)
     assert ws_resp.status_code == 400, f"Expected 400 for whitespace query, got {ws_resp.status_code}"
     print("[PASS] Whitespace query correctly rejected with 400 Bad Request.")
 
     # 4. Missing query parameter
-    missing_resp = client.get("/api/search")
+    missing_resp = client.get("/api/search", headers=headers)
     assert missing_resp.status_code == 400, f"Expected 400 for missing query, got {missing_resp.status_code}"
     print("[PASS] Missing 'q' parameter rejected with 400 Bad Request.")
 
     # 5. Invalid top_k (< 1)
-    invalid_k_resp = client.get("/api/search?q=ransomware&top_k=0")
+    invalid_k_resp = client.get("/api/search?q=ransomware&top_k=0", headers=headers)
     assert invalid_k_resp.status_code == 400, f"Expected 400 for top_k=0, got {invalid_k_resp.status_code}"
     print("[PASS] Invalid top_k=0 rejected with 400 Bad Request.")
 
     # 6. Invalid top_k (> 100)
-    invalid_k2_resp = client.get("/api/search?q=ransomware&top_k=150")
+    invalid_k2_resp = client.get("/api/search?q=ransomware&top_k=150", headers=headers)
     assert invalid_k2_resp.status_code == 400, f"Expected 400 for top_k=150, got {invalid_k2_resp.status_code}"
     print("[PASS] Invalid top_k=150 rejected with 400 Bad Request.")
 
@@ -334,7 +337,11 @@ def test_rebuild_index_endpoint():
     Test 7: Test POST /api/search/rebuild endpoint.
     """
     print("\n--- Test 7: Index Rebuild Endpoint POST /api/search/rebuild ---")
-    resp = client.post("/api/search/rebuild?auto_embed=true")
+    login_resp = client.post("/api/auth/login", json={"email": "admin@cybershield.io", "password": "AdminPass123!"})
+    token = login_resp.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {token}"}
+
+    resp = client.post("/api/search/rebuild?auto_embed=true", headers=admin_headers)
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
     body = resp.json()
     assert body["status"] == "success"

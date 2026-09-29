@@ -53,12 +53,17 @@ def test_embeddings_integration_suite():
     print("\n=== Running Day 5 Embedding Generation Integration Tests ===")
     Base.metadata.create_all(bind=engine)
 
+    login_resp = client.post("/api/auth/login", json={"email": "admin@cybershield.io", "password": "AdminPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
     # 1. Upload sample document
     print("\n[Test 1] Uploading sample security document...")
     upload_resp = client.post(
         "/api/documents/upload",
         data={"document_type": "vulnerability_advisory", "title": "Day 5 Embedding Advisory"},
-        files={"file": ("day5_advisory.txt", b"Critical security vulnerability advisory CVE-2026-9999. Apply security patch immediately.", "text/plain")}
+        files={"file": ("day5_advisory.txt", b"Critical security vulnerability advisory CVE-2026-9999. Apply security patch immediately.", "text/plain")},
+        headers=headers,
     )
     assert upload_resp.status_code == 201, f"Upload failed: {upload_resp.text}"
     doc_id = upload_resp.json()["document_id"]
@@ -66,14 +71,14 @@ def test_embeddings_integration_suite():
 
     # 2. Process document into chunks
     print(f"\n[Test 2] Processing document {doc_id} into chunks...")
-    process_resp = client.post(f"/api/documents/{doc_id}/process")
+    process_resp = client.post(f"/api/documents/{doc_id}/process", headers=headers)
     assert process_resp.status_code == 200, f"Processing failed: {process_resp.text}"
     chunks_created = process_resp.json()["chunks_created"]
     print(f"[OK] Document processed into {chunks_created} chunk(s).")
 
     # 3. Generate embeddings: POST /api/documents/{doc_id}/embed
     print(f"\n[Test 3] POST /api/documents/{doc_id}/embed...")
-    embed_resp = client.post(f"/api/documents/{doc_id}/embed")
+    embed_resp = client.post(f"/api/documents/{doc_id}/embed", headers=headers)
     assert embed_resp.status_code == 200, f"Embedding failed: {embed_resp.text}"
     embed_data = embed_resp.json()
     assert embed_data["document_id"] == doc_id
@@ -96,7 +101,7 @@ def test_embeddings_integration_suite():
 
     # 5. Test duplicate embedding prevention (force=False)
     print(f"\n[Test 5] Testing duplicate embedding prevention (force=False)...")
-    dup_embed_resp = client.post(f"/api/documents/{doc_id}/embed")
+    dup_embed_resp = client.post(f"/api/documents/{doc_id}/embed", headers=headers)
     assert dup_embed_resp.status_code == 200
     dup_data = dup_embed_resp.json()
     assert dup_data["status"] == "already_embedded"
@@ -105,7 +110,7 @@ def test_embeddings_integration_suite():
 
     # 6. Test force embedding regeneration (force=True)
     print(f"\n[Test 6] Testing force embedding regeneration (force=True)...")
-    force_embed_resp = client.post(f"/api/documents/{doc_id}/embed?force=true")
+    force_embed_resp = client.post(f"/api/documents/{doc_id}/embed?force=true", headers=headers)
     assert force_embed_resp.status_code == 200
     force_data = force_embed_resp.json()
     assert force_data["status"] == "success"
@@ -113,7 +118,7 @@ def test_embeddings_integration_suite():
 
     # 7. Test Error Handling: 404 for missing document
     print(f"\n[Test 7] Error handling for non-existent document ID 999999...")
-    not_found_resp = client.post("/api/documents/999999/embed")
+    not_found_resp = client.post("/api/documents/999999/embed", headers=headers)
     assert not_found_resp.status_code == 404
     print("[OK] Returned 404 for missing document.")
 
@@ -122,10 +127,11 @@ def test_embeddings_integration_suite():
     unchunked_upload = client.post(
         "/api/documents/upload",
         data={"document_type": "threat_intelligence"},
-        files={"file": ("unchunked.txt", b"Unchunked content text.", "text/plain")}
+        files={"file": ("unchunked.txt", b"Unchunked content text.", "text/plain")},
+        headers=headers,
     )
     unchunked_id = unchunked_upload.json()["document_id"]
-    unchunked_embed_resp = client.post(f"/api/documents/{unchunked_id}/embed")
+    unchunked_embed_resp = client.post(f"/api/documents/{unchunked_id}/embed", headers=headers)
     assert unchunked_embed_resp.status_code == 400
     assert "no chunks" in unchunked_embed_resp.json()["detail"].lower()
     print("[OK] Returned 400 for unchunked document.")

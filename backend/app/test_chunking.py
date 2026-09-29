@@ -74,10 +74,15 @@ def test_chunking_integration_suite():
 
     full_document_text = "\n\n".join(security_paragraphs)
 
+    login_resp = client.post("/api/auth/login", json={"email": "admin@cybershield.io", "password": "AdminPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
     upload_resp = client.post(
         "/api/documents/upload",
         data={"document_type": "threat_intelligence", "title": "Day 4 Security Comprehensive Advisory"},
-        files={"file": ("day4_advisory.txt", full_document_text.encode("utf-8"), "text/plain")}
+        files={"file": ("day4_advisory.txt", full_document_text.encode("utf-8"), "text/plain")},
+        headers=headers,
     )
     assert upload_resp.status_code == 201, f"Upload failed: {upload_resp.text}"
     doc_id = upload_resp.json()["document_id"]
@@ -85,7 +90,7 @@ def test_chunking_integration_suite():
 
     # 2. Process document into chunks: POST /api/documents/{doc_id}/process
     print(f"\n[Test 2] POST /api/documents/{doc_id}/process...")
-    process_resp = client.post(f"/api/documents/{doc_id}/process")
+    process_resp = client.post(f"/api/documents/{doc_id}/process", headers=headers)
     assert process_resp.status_code == 200, f"Processing failed: {process_resp.text}"
     process_data = process_resp.json()
     assert process_data["document_id"] == doc_id
@@ -96,7 +101,7 @@ def test_chunking_integration_suite():
 
     # 3. Verify chunks in PostgreSQL database via GET /api/documents/{doc_id}/chunks
     print(f"\n[Test 3] Verifying stored DocumentChunk records in PostgreSQL...")
-    chunks_resp = client.get(f"/api/documents/{doc_id}/chunks")
+    chunks_resp = client.get(f"/api/documents/{doc_id}/chunks", headers=headers)
     assert chunks_resp.status_code == 200, f"GET chunks failed: {chunks_resp.text}"
     chunks_list = chunks_resp.json()
     assert len(chunks_list) == chunks_created_count
@@ -110,7 +115,7 @@ def test_chunking_integration_suite():
 
     # 4. Test duplicate processing prevention (force=False)
     print(f"\n[Test 4] Testing duplicate processing prevention (force=False)...")
-    dup_resp = client.post(f"/api/documents/{doc_id}/process")
+    dup_resp = client.post(f"/api/documents/{doc_id}/process", headers=headers)
     assert dup_resp.status_code == 200
     dup_data = dup_resp.json()
     assert dup_data["processing_status"] == "already_processed"
@@ -119,7 +124,7 @@ def test_chunking_integration_suite():
 
     # 5. Test force re-processing (force=True)
     print(f"\n[Test 5] Testing force re-processing (force=True)...")
-    force_resp = client.post(f"/api/documents/{doc_id}/process?force=true")
+    force_resp = client.post(f"/api/documents/{doc_id}/process?force=true", headers=headers)
     assert force_resp.status_code == 200
     force_data = force_resp.json()
     assert force_data["processing_status"] == "success"
@@ -128,7 +133,7 @@ def test_chunking_integration_suite():
 
     # 6. Test Error Handling: 404 for non-existent document
     print(f"\n[Test 6] Error handling for non-existent document ID 999999...")
-    not_found_resp = client.post("/api/documents/999999/process")
+    not_found_resp = client.post("/api/documents/999999/process", headers=headers)
     assert not_found_resp.status_code == 404
     print(f"[OK] Returned 404 for missing document.")
 
@@ -148,7 +153,7 @@ def test_chunking_integration_suite():
     empty_id = empty_doc.id
     db.close()
 
-    empty_process_resp = client.post(f"/api/documents/{empty_id}/process")
+    empty_process_resp = client.post(f"/api/documents/{empty_id}/process", headers=headers)
     assert empty_process_resp.status_code == 400
     assert "empty" in empty_process_resp.json()["detail"].lower()
     print(f"[OK] Returned 400 for empty document content.")

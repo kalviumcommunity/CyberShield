@@ -45,13 +45,19 @@ def test_document_processing_suite():
     # Ensure database schema exists
     Base.metadata.create_all(bind=engine)
 
+    # Authenticate as admin
+    login_resp = client.post("/api/auth/login", json={"email": "admin@cybershield.io", "password": "AdminPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
     # 1. Test TXT file upload and text extraction
     print("\n[Test 1] Uploading TXT file (threat_intelligence)...")
     txt_content = "CyberShield Threat Intelligence Advisory: APT29 Spear-phishing campaign detected."
     txt_response = client.post(
         "/api/documents/upload",
         data={"document_type": "threat_intelligence", "title": "APT29 Threat Advisory"},
-        files={"file": ("apt29_report.txt", txt_content.encode("utf-8"), "text/plain")}
+        files={"file": ("apt29_report.txt", txt_content.encode("utf-8"), "text/plain")},
+        headers=headers,
     )
     assert txt_response.status_code == 201, f"TXT Upload failed: {txt_response.text}"
     txt_data = txt_response.json()
@@ -69,7 +75,8 @@ def test_document_processing_suite():
     pdf_response = client.post(
         "/api/documents/upload",
         data={"document_type": "incident_runbook", "title": "Ransomware Runbook"},
-        files={"file": ("ransomware_runbook.pdf", pdf_bytes, "application/pdf")}
+        files={"file": ("ransomware_runbook.pdf", pdf_bytes, "application/pdf")},
+        headers=headers,
     )
     assert pdf_response.status_code == 201, f"PDF Upload failed: {pdf_response.text}"
     pdf_data = pdf_response.json()
@@ -88,7 +95,8 @@ def test_document_processing_suite():
     docx_response = client.post(
         "/api/documents/upload",
         data={"document_type": "vulnerability_advisory", "title": "CVE-2026-8888 Advisory"},
-        files={"file": ("cve_2026_8888.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+        files={"file": ("cve_2026_8888.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+        headers=headers,
     )
     assert docx_response.status_code == 201, f"DOCX Upload failed: {docx_response.text}"
     docx_data = docx_response.json()
@@ -101,7 +109,7 @@ def test_document_processing_suite():
 
     # 4. Test GET /api/documents (List all documents)
     print("\n[Test 4] GET /api/documents...")
-    get_all_resp = client.get("/api/documents")
+    get_all_resp = client.get("/api/documents", headers=headers)
     assert get_all_resp.status_code == 200, f"GET all failed: {get_all_resp.text}"
     docs = get_all_resp.json()
     assert len(docs) >= 3
@@ -109,7 +117,7 @@ def test_document_processing_suite():
 
     # 5. Test GET /api/documents/{document_id}
     print(f"\n[Test 5] GET /api/documents/{pdf_doc_id}...")
-    get_doc_resp = client.get(f"/api/documents/{pdf_doc_id}")
+    get_doc_resp = client.get(f"/api/documents/{pdf_doc_id}", headers=headers)
     assert get_doc_resp.status_code == 200, f"GET doc by ID failed: {get_doc_resp.text}"
     doc_detail = get_doc_resp.json()
     assert doc_detail["id"] == pdf_doc_id
@@ -122,7 +130,8 @@ def test_document_processing_suite():
     bad_file_resp = client.post(
         "/api/documents/upload",
         data={"document_type": "threat_intelligence"},
-        files={"file": ("malicious.exe", b"binary data", "application/octet-stream")}
+        files={"file": ("malicious.exe", b"binary data", "application/octet-stream")},
+        headers=headers,
     )
     assert bad_file_resp.status_code == 400
     assert "Unsupported file type" in bad_file_resp.json()["detail"]
@@ -133,7 +142,8 @@ def test_document_processing_suite():
     bad_type_resp = client.post(
         "/api/documents/upload",
         data={"document_type": "invalid_type"},
-        files={"file": ("test.txt", b"some content", "text/plain")}
+        files={"file": ("test.txt", b"some content", "text/plain")},
+        headers=headers,
     )
     assert bad_type_resp.status_code == 400
     assert "Invalid document_type" in bad_type_resp.json()["detail"]
@@ -141,7 +151,7 @@ def test_document_processing_suite():
 
     # 8. Test Error Handling: Non-existent Document ID
     print("\n[Test 8] Error handling for non-existent document ID 999999...")
-    not_found_resp = client.get("/api/documents/999999")
+    not_found_resp = client.get("/api/documents/999999", headers=headers)
     assert not_found_resp.status_code == 404
     print(f"[OK] Returned 404 for non-existent document.")
 

@@ -227,29 +227,32 @@ def test_api_endpoint_validation():
     Test 4: Verify API validation for POST /api/mitigation/search.
     """
     print("\n--- Test 4: API Endpoint Validation (POST /api/mitigation/search) ---")
+    login_resp = client.post("/api/auth/login", json={"email": "analyst@cybershield.io", "password": "AnalystPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Empty alert string
-    resp = client.post("/api/mitigation/search", json={"alert": ""})
+    resp = client.post("/api/mitigation/search", json={"alert": ""}, headers=headers)
     assert resp.status_code == 400
     assert "cannot be empty" in resp.json()["detail"].lower()
 
     # 2. Whitespace alert string
-    resp = client.post("/api/mitigation/search", json={"alert": "    "})
+    resp = client.post("/api/mitigation/search", json={"alert": "    "}, headers=headers)
     assert resp.status_code == 400
     assert "cannot be empty" in resp.json()["detail"].lower()
 
     # 3. Invalid top_k (< 1)
-    resp = client.post("/api/mitigation/search", json={"alert": "ransomware", "top_k": 0})
+    resp = client.post("/api/mitigation/search", json={"alert": "ransomware", "top_k": 0}, headers=headers)
     assert resp.status_code == 400
     assert "top_k" in resp.json()["detail"].lower()
 
     # 4. Invalid top_k (> 100)
-    resp = client.post("/api/mitigation/search", json={"alert": "ransomware", "top_k": 101})
+    resp = client.post("/api/mitigation/search", json={"alert": "ransomware", "top_k": 101}, headers=headers)
     assert resp.status_code == 400
     assert "top_k" in resp.json()["detail"].lower()
 
     # 5. Invalid min_threshold (< 0.0 or > 1.0)
-    resp = client.post("/api/mitigation/search", json={"alert": "ransomware", "min_threshold": 1.5})
+    resp = client.post("/api/mitigation/search", json={"alert": "ransomware", "min_threshold": 1.5}, headers=headers)
     assert resp.status_code == 400
     assert "min_threshold" in resp.json()["detail"].lower()
 
@@ -264,6 +267,9 @@ def test_three_sample_security_alerts():
     - Alert 3: "SQL injection vulnerability identified in web authentication endpoint."
     """
     print("\n--- Test 5: Benchmark 3 Sample Security Alerts & Verify Sources ---")
+    login_resp = client.post("/api/auth/login", json={"email": "analyst@cybershield.io", "password": "AnalystPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     sample_alerts = [
         {
@@ -288,6 +294,7 @@ def test_three_sample_security_alerts():
         resp = client.post(
             "/api/mitigation/search",
             json={"alert": alert_text, "top_k": 3, "min_threshold": 0.35},
+            headers=headers,
         )
         assert resp.status_code == 200, f"Failed for alert: {alert_text} - {resp.text}"
         data = resp.json()

@@ -205,3 +205,121 @@ Content-Type: application/json
 ```bash
 python app/test_rag.py
 ```
+
+---
+
+## Authentication & Security (RBAC) - Day 9
+
+CyberShield backend is protected with **JWT (JSON Web Token) authentication** and **Bcrypt password hashing**, enforcing **Role-Based Access Control (RBAC)** across administrative operations and security analyst workflows.
+
+### Default Test Credentials
+The backend automatically seeds default system accounts upon initial startup:
+| Role | Email | Password | Permissions |
+|------|-------|----------|-------------|
+| **Admin** | `admin@cybershield.io` | `AdminPass123!` | Upload documents, chunk & embed, rebuild FAISS index, create users, search & view |
+| **Analyst** | `analyst@cybershield.io` | `AnalystPass123!` | Semantic search, mitigation retrieval, grounded AI answers, view documents |
+
+### Authentication Endpoints
+
+#### 1. User Login
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "analyst@cybershield.io",
+  "password": "AnalystPass123!"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 3,
+    "name": "Security Analyst",
+    "email": "analyst@cybershield.io",
+    "role": "analyst",
+    "created_at": "2026-09-29T12:00:00Z"
+  }
+}
+```
+
+#### 2. User Registration
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane.doe@cybershield.io",
+  "password": "SecurePassword123!",
+  "role": "analyst"
+}
+```
+**Response (201 Created):**
+```json
+{
+  "id": 4,
+  "name": "Jane Doe",
+  "email": "jane.doe@cybershield.io",
+  "role": "analyst",
+  "created_at": "2026-09-29T12:05:00Z"
+}
+```
+
+#### 3. Admin User Creation (Admin only)
+```http
+POST /api/auth/users
+Authorization: Bearer <ADMIN_JWT_TOKEN>
+Content-Type: application/json
+
+{
+  "name": "New Analyst",
+  "email": "analyst2@cybershield.io",
+  "password": "Password123!",
+  "role": "analyst"
+}
+```
+
+#### 4. Current User Profile
+```http
+GET /api/auth/me
+Authorization: Bearer <JWT_TOKEN>
+```
+
+### Role-Based Access Control (RBAC) Matrix
+
+| Endpoint | Method | Required Role | Description |
+|----------|--------|---------------|-------------|
+| `/api/auth/login` | POST | Public | Authenticate and obtain JWT |
+| `/api/auth/register` | POST | Public | Register new analyst account |
+| `/api/auth/me` | GET | Authenticated | Get current user profile |
+| `/api/auth/users` | POST | `admin` | Admin creation of new users |
+| `/api/documents/upload` | POST | `admin` | Upload and extract threat docs (.pdf, .docx, .txt) |
+| `/api/documents/{id}/process` | POST | `admin` | Chunk document content |
+| `/api/documents/{id}/embed` | POST | `admin` | Generate vector embeddings |
+| `/api/documents` | GET | Authenticated | List stored security documents |
+| `/api/documents/{id}` | GET | Authenticated | Get document details |
+| `/api/documents/{id}/chunks` | GET | Authenticated | Get chunks for document |
+| `/api/search` | GET | Authenticated | Semantic vector search |
+| `/api/search/rebuild` | POST | `admin` | Rebuild FAISS index from stored embeddings |
+| `/api/mitigation/search` | POST | Authenticated | Retrieve structured mitigation steps |
+| `/api/mitigation/answer` | POST | Authenticated | Grounded AI RAG answer generation |
+
+### Security Checks & Safeguards
+- **Zero Credential Leaks**: Password hashes (`password_hash`) are strictly excluded from all Pydantic response models (`UserResponse`, `TokenResponse`, etc.).
+- **Upload Validation**: Enforces maximum file size limit (20MB) and strict allowlist for supported cybersecurity document extensions (`.pdf`, `.docx`, `.txt`).
+- **Input Validation**: Request bodies and query parameters (`top_k`, `min_threshold`, `alert`, `q`) are validated with strict bounds and non-empty checks.
+- **Centralized Error Handling**: Standardized structured JSON responses for `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `422 Unprocessable Entity`, and `500 Internal Server Error`.
+
+### Running Day 9 Security & Integration Tests
+```bash
+# Run pytest across the Day 9 test suite
+pytest app/test_day9_auth_security.py -v
+
+# Or run directly via Python
+python app/test_day9_auth_security.py
+```
+

@@ -237,11 +237,15 @@ def test_api_answer_endpoint():
     Test 5: Verify POST /api/mitigation/answer endpoint and request validation.
     """
     print("\n--- Test 5: API Endpoint POST /api/mitigation/answer ---")
+    login_resp = client.post("/api/auth/login", json={"email": "analyst@cybershield.io", "password": "AnalystPass123!"})
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Valid request
     resp = client.post(
         "/api/mitigation/answer",
         json={"alert": "Multiple Windows endpoints are showing suspicious PowerShell activity."},
+        headers=headers,
     )
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
     data = resp.json()
@@ -253,19 +257,19 @@ def test_api_answer_endpoint():
     print("[PASS] POST /api/mitigation/answer returned valid JSON with answer and sources.")
 
     # 2. Empty alert validation
-    empty_resp = client.post("/api/mitigation/answer", json={"alert": ""})
+    empty_resp = client.post("/api/mitigation/answer", json={"alert": ""}, headers=headers)
     assert empty_resp.status_code == 400
     assert "cannot be empty" in empty_resp.json()["detail"].lower()
     print("[PASS] Empty alert string rejected with 400 Bad Request.")
 
     # 3. Whitespace alert validation
-    ws_resp = client.post("/api/mitigation/answer", json={"alert": "   "})
+    ws_resp = client.post("/api/mitigation/answer", json={"alert": "   "}, headers=headers)
     assert ws_resp.status_code == 400
     assert "cannot be empty" in ws_resp.json()["detail"].lower()
     print("[PASS] Whitespace alert rejected with 400 Bad Request.")
 
     # 4. Invalid top_k validation (< 1)
-    k_resp = client.post("/api/mitigation/answer", json={"alert": "ransomware", "top_k": 0})
+    k_resp = client.post("/api/mitigation/answer", json={"alert": "ransomware", "top_k": 0}, headers=headers)
     assert k_resp.status_code == 400
     print("[PASS] Invalid top_k rejected with 400 Bad Request.")
 
@@ -273,6 +277,7 @@ def test_api_answer_endpoint():
     irrelevant_resp = client.post(
         "/api/mitigation/answer",
         json={"alert": "How do I make strawberry ice cream at home?", "min_threshold": 0.60},
+        headers=headers,
     )
     assert irrelevant_resp.status_code == 200
     irr_data = irrelevant_resp.json()
