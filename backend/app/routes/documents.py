@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models import Document, DocumentChunk, DocumentType
 from app.schemas.document import (
     DocumentChunkResponse,
+    DocumentEmbedResponse,
     DocumentProcessResponse,
     DocumentResponse,
     DocumentUploadResponse,
@@ -17,6 +18,11 @@ from app.services.document_service import (
     get_file_extension,
     is_supported_file_type,
     save_uploaded_file,
+)
+from app.services.embedding_service import (
+    EMBEDDING_DIMENSION,
+    generate_embeddings_batch,
+    serialize_embedding,
 )
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -175,6 +181,74 @@ def process_document_chunks(
         chunks_created=len(new_chunks),
         processing_status="success",
         message=f"Document processed successfully into {len(new_chunks)} text chunk(s).",
+    )
+
+
+@router.post("/{document_id}/embed", response_model=DocumentEmbedResponse)
+def generate_document_embeddings(
+    document_id: int,
+    force: bool = Query(False, description="Set to true to force re-generating vector embeddings"),
+    db: Session = Depends(get_db),
+):
+    """
+    Generates 384-dimensional semantic embeddings for all chunks of a document
+    using SentenceTransformer ('all-MiniLM-L6-v2').
+    """
+    # 1. Check if document exists
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    # 2. Fetch document chunks
+    chunks = (
+        db.query(DocumentChunk)
+        .filter(DocumentChunk.document_id == document_id)
+        .order_by(DocumentChunk.chunk_index.asc())
+        .all()
+    )
+
+    if not chunks:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Document with ID {document_id} has no chunks. Please process the document first via /api/documents/{document_id}/process.",
+        )
+
+    # 3. Check if embeddings already exist (avoid unnecessary regeneration unless force=True)
+    already_embedded = all(c.embedding is not None for c in chunks)
+    if already_embedded and not force:
+        return DocumentEmbedResponse(
+            document_id=document_id,
+            chunks_embedded=len(chunks),
+            embedding_dimension=EMBEDDING_DIMENSION,
+            status="already_embedded",
+            message="Embeddings already generated for this document. Set force=true to regenerate.",
+        )
+
+    # 4. Extract text content from chunks and generate embeddings in batch
+    texts = [c.content for c in chunks]
+    try:
+        vectors = generate_embeddings_batch(texts)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate embeddings: {str(e)}",
+        )
+
+    # 5. Store serialized embeddings in database
+    for chunk_obj, vec in zip(chunks, vectors):
+        chunk_obj.embedding = serialize_embedding(vec)
+
+    db.commit()
+
+    return DocumentEmbedResponse(
+        document_id=document_id,
+        chunks_embedded=len(chunks),
+        embedding_dimension=EMBEDDING_DIMENSION,
+        status="success",
+        message=f"Generated semantic embeddings for {len(chunks)} document chunk(s).",
     )
 
 
