@@ -1,11 +1,17 @@
 import os
 from typing import List, Optional
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Document, DocumentType
-from app.schemas.document import DocumentResponse, DocumentUploadResponse
+from app.models import Document, DocumentChunk, DocumentType
+from app.schemas.document import (
+    DocumentChunkResponse,
+    DocumentProcessResponse,
+    DocumentResponse,
+    DocumentUploadResponse,
+)
+from app.services.chunking_service import chunk_text
 from app.services.document_service import (
     extract_text,
     get_file_extension,
@@ -62,7 +68,6 @@ async def upload_document(
         ext = get_file_extension(file.filename)
         extracted_text = extract_text(saved_file_path, ext)
     except Exception as e:
-        # If extraction fails, cleanup saved file and return error
         if os.path.exists(saved_file_path):
             os.remove(saved_file_path)
         raise HTTPException(
@@ -100,6 +105,99 @@ async def upload_document(
         content=new_doc.content,
         created_at=new_doc.created_at,
     )
+
+
+@router.post("/{document_id}/process", response_model=DocumentProcessResponse)
+def process_document_chunks(
+    document_id: int,
+    force: bool = Query(False, description="Set to true to force re-processing and overwrite existing chunks"),
+    db: Session = Depends(get_db),
+):
+    """
+    Cleans extracted document text, splits it into sequential chunks (500-800 words),
+    and stores the resulting chunks in the DocumentChunk database table.
+    """
+    # 1. Fetch document from database
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    # 2. Check if content exists
+    if not doc.content or not doc.content.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Document content is empty. Cannot process document.",
+        )
+
+    # 3. Check for existing chunks (prevent duplicate processing unless force=True)
+    existing_chunks_count = db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).count()
+
+    if existing_chunks_count > 0 and not force:
+        return DocumentProcessResponse(
+            document_id=document_id,
+            chunks_created=existing_chunks_count,
+            processing_status="already_processed",
+            message="Document has already been processed into chunks. Set force=true to re-process.",
+        )
+
+    # 4. If force re-processing, delete existing chunks
+    if existing_chunks_count > 0 and force:
+        db.query(DocumentChunk).filter(DocumentChunk.document_id == document_id).delete()
+        db.commit()
+
+    # 5. Clean text and generate chunks (500-800 words, overlapping)
+    chunk_strings = chunk_text(doc.content, target_chunk_size=600, chunk_overlap=60)
+
+    if not chunk_strings:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No text chunks generated from document content.",
+        )
+
+    # 6. Save chunks to DocumentChunk table
+    new_chunks = []
+    for index, text_snippet in enumerate(chunk_strings):
+        chunk_record = DocumentChunk(
+            document_id=document_id,
+            chunk_index=index,
+            content=text_snippet,
+        )
+        new_chunks.append(chunk_record)
+
+    db.add_all(new_chunks)
+    db.commit()
+
+    return DocumentProcessResponse(
+        document_id=document_id,
+        chunks_created=len(new_chunks),
+        processing_status="success",
+        message=f"Document processed successfully into {len(new_chunks)} text chunk(s).",
+    )
+
+
+@router.get("/{document_id}/chunks", response_model=List[DocumentChunkResponse])
+def get_document_chunks(document_id: int, db: Session = Depends(get_db)):
+    """
+    Retrieve all processed text chunks for a given document.
+    """
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {document_id} not found",
+        )
+
+    chunks = (
+        db.query(DocumentChunk)
+        .filter(DocumentChunk.document_id == document_id)
+        .order_by(DocumentChunk.chunk_index.asc())
+        .all()
+    )
+
+    return chunks
 
 
 @router.get("", response_model=List[DocumentResponse])
