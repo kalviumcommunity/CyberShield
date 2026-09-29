@@ -61,6 +61,20 @@ class DocumentChunkResponse(BaseModel):
     document_id: int = Field(..., description="Associated document ID")
     chunk_index: int = Field(..., description="Order index of chunk within document")
     content: str = Field(..., description="Text content of chunk")
+    embedding: Optional[str] = Field(None, description="Serialized vector embedding")
     created_at: datetime = Field(..., description="Creation timestamp")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentEmbedResponse(BaseModel):
+    """
+    Response schema for POST /api/documents/{document_id}/embed
+    """
+    document_id: int = Field(..., description="ID of the embedded document")
+    chunks_embedded: int = Field(..., description="Number of text chunks embedded")
+    embedding_dimension: int = Field(384, description="Vector embedding dimension (384)")
+    status: str = Field(..., description="Status of embedding ('success' or 'already_embedded')")
+    message: str = Field(..., description="Descriptive status message")
 
     model_config = ConfigDict(from_attributes=True)

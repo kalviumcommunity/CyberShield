@@ -7,6 +7,7 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentProcessResponse,
     DocumentChunkResponse,
+    DocumentEmbedResponse,
 )
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "DocumentResponse",
     "DocumentProcessResponse",
     "DocumentChunkResponse",
+    "DocumentEmbedResponse",
 ]
