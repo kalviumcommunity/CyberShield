@@ -15,3 +15,9 @@ ENV/
 # IDE / Editor settings
 .vscode/
 .idea/
+
+# Local Storage & Uploads
+uploads/
+*.db
+*.sqlite
+

@@ -52,6 +52,7 @@ class Document(Base):
     file_name = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     uploaded_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    content = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
     # Relationships
