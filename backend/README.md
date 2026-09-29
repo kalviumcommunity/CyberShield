@@ -78,3 +78,43 @@ The core entities defined in SQLAlchemy (`app/models.py`):
 3. **DocumentChunk** (`document_chunks`): Stores partitioned text sections of documents.
 4. **Alert** (`alerts`): Security alerts requiring mitigation lookup.
 5. **MitigationResult** (`mitigation_results`): Maps security alerts to relevant document chunks and scores.
+
+---
+
+## Semantic Vector Search (FAISS) - Day 6
+
+CyberShield uses **FAISS** (Facebook AI Similarity Search) and **Sentence Transformers** (`all-MiniLM-L6-v2`) to perform dense vector similarity search across document chunks.
+
+### Endpoints
+- **Search Document Chunks**:
+  ```http
+  GET /api/search?q=<query>&top_k=5
+  ```
+  Query parameters:
+  - `q`: Security alert description or query (required, non-empty)
+  - `top_k`: Number of top matching chunks to retrieve (1-100, default: 5)
+
+- **Rebuild FAISS Index**:
+  ```http
+  POST /api/search/rebuild?auto_embed=true
+  ```
+
+### Example Search Response
+```json
+[
+  {
+    "chunk_id": 18,
+    "document_id": 11,
+    "document_title": "Endpoint Isolation and Incident Response Runbook",
+    "chunk_content": "Incident Response Runbook: Endpoint Isolation and Host Remediation...",
+    "content": "Incident Response Runbook: Endpoint Isolation and Host Remediation...",
+    "similarity_score": 0.735,
+    "relevance_score": 0.735
+  }
+]
+```
+
+### Running Vector Search Tests
+```bash
+python app/test_vector_search.py
+```
