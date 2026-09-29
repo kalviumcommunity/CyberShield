@@ -19,6 +19,10 @@ from app.schemas.mitigation import (
     MitigationSearchRequest,
     MitigationSearchResponse,
 )
+from app.schemas.rag import (
+    MitigationAnswerRequest,
+    MitigationAnswerResponse,
+)
 
 __all__ = [
     "HealthCheckResponse",
@@ -33,4 +37,6 @@ __all__ = [
     "MitigationResultItem",
     "MitigationSearchRequest",
     "MitigationSearchResponse",
+    "MitigationAnswerRequest",
+    "MitigationAnswerResponse",
 ]

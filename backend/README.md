@@ -161,3 +161,47 @@ Content-Type: application/json
 ```bash
 python app/test_mitigation.py
 ```
+
+---
+
+## Grounded AI Mitigation Response (RAG) - Day 8
+
+CyberShield integrates an AI response layer on top of semantic retrieval (`POST /api/mitigation/answer`).
+- Retrieval is the sole source of truth (grounded synthesis, zero hallucination).
+- Summarizes actionable mitigation steps strictly from retrieved chunks.
+- Cites source documents and returns retrieval sources alongside the answer.
+- Returns `"Insufficient information found in the available security documents."` when no relevant context is found.
+
+### Endpoint
+```http
+POST /api/mitigation/answer
+Content-Type: application/json
+
+{
+  "alert": "Multiple Windows endpoints are showing suspicious PowerShell activity."
+}
+```
+
+### Response Structure
+```json
+{
+  "alert": "Multiple Windows endpoints are showing suspicious PowerShell activity.",
+  "answer": "Based on the available security documentation, the following mitigation steps are recommended for this alert:\n\n**Source: PowerShell Threat Intelligence and Incident Runbook (Incident Runbook)**\n- Immediately isolate affected Windows endpoints via host-based firewall or EDR containment.\n- Terminate rogue PowerShell process trees (powershell.exe, pwsh.exe) and parent processes.\n- Enable PowerShell Script Block Logging (Event ID 4104) and Module Logging across Group Policy.\n- Enforce PowerShell Constrained Language Mode and configure AppLocker / WDAC policies.\n- Revoke compromised user credentials and invalidate Kerberos golden tickets.",
+  "sources": [
+    {
+      "document_id": 16,
+      "document_title": "PowerShell Threat Intelligence and Incident Runbook",
+      "document_type": "incident_runbook",
+      "chunk_id": 22,
+      "mitigation_text": "Incident Runbook: Suspicious PowerShell Activity and Host Containment...",
+      "relevance_score": 0.7979,
+      "source_file": "powershell_incident_runbook.txt"
+    }
+  ]
+}
+```
+
+### Running RAG Tests
+```bash
+python app/test_rag.py
+```
