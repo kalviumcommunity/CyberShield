@@ -14,6 +14,11 @@ from app.schemas.search import (
     SearchResponse,
     SearchRebuildResponse,
 )
+from app.schemas.mitigation import (
+    MitigationResultItem,
+    MitigationSearchRequest,
+    MitigationSearchResponse,
+)
 
 __all__ = [
     "HealthCheckResponse",
@@ -25,4 +30,7 @@ __all__ = [
     "SearchResultItem",
     "SearchResponse",
     "SearchRebuildResponse",
+    "MitigationResultItem",
+    "MitigationSearchRequest",
+    "MitigationSearchResponse",
 ]

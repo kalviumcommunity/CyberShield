@@ -4,7 +4,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import Base, engine
-from app.routes import documents, health, search
+from app.routes import documents, health, mitigation, search
 
 # Ensure all database tables exist on startup
 Base.metadata.create_all(bind=engine)
@@ -41,6 +41,9 @@ app.include_router(documents.router, prefix="/api/v1")
 
 app.include_router(search.router, prefix="/api")
 app.include_router(search.router, prefix="/api/v1")
+
+app.include_router(mitigation.router, prefix="/api")
+app.include_router(mitigation.router, prefix="/api/v1")
 
 
 @app.get("/")
