@@ -118,3 +118,46 @@ CyberShield uses **FAISS** (Facebook AI Similarity Search) and **Sentence Transf
 ```bash
 python app/test_vector_search.py
 ```
+
+---
+
+## Cybersecurity Mitigation Retrieval API - Day 7
+
+CyberShield provides a mitigation retrieval pipeline (`POST /api/mitigation/search`) that translates active security alerts into verbatim mitigation steps extracted from ingested incident runbooks, threat intelligence reports, and vulnerability advisories.
+
+### Endpoint
+```http
+POST /api/mitigation/search
+Content-Type: application/json
+
+{
+  "alert": "Multiple Windows endpoints are showing suspicious PowerShell activity.",
+  "top_k": 5,
+  "min_threshold": 0.30
+}
+```
+
+### Response Structure
+```json
+{
+  "alert": "Multiple Windows endpoints are showing suspicious PowerShell activity.",
+  "results": [
+    {
+      "document_id": 14,
+      "document_title": "PowerShell Threat Intelligence and Incident Runbook",
+      "document_type": "incident_runbook",
+      "chunk_id": 22,
+      "mitigation_text": "Incident Runbook: Suspicious PowerShell Activity and Host Containment. When multiple Windows endpoints show suspicious PowerShell execution...",
+      "relevance_score": 0.8142,
+      "source_file": "powershell_incident_runbook.txt"
+    }
+  ],
+  "total_results": 1,
+  "alert_id": 4
+}
+```
+
+### Running Mitigation Retrieval Tests
+```bash
+python app/test_mitigation.py
+```

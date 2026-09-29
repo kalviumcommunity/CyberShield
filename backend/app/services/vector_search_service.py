@@ -249,10 +249,19 @@ class VectorSearchService:
             clamped_score = max(0.0, min(1.0, float(score)))
             rounded_score = round(clamped_score, 4)
 
+            doc_type = (
+                chunk_obj.document.document_type.value
+                if chunk_obj.document and hasattr(chunk_obj.document.document_type, "value")
+                else str(chunk_obj.document.document_type) if chunk_obj.document else "unknown"
+            )
+            file_name = chunk_obj.document.file_name if chunk_obj.document else None
+
             results.append({
                 "chunk_id": chunk_obj.id,
                 "document_id": chunk_obj.document_id,
                 "document_title": doc_title,
+                "document_type": doc_type,
+                "file_name": file_name,
                 "chunk_content": chunk_obj.content,
                 "content": chunk_obj.content,
                 "similarity_score": rounded_score,
