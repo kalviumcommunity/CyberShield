@@ -32,9 +32,27 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment variables
+# Environment variables & secrets (CRITICAL: NEVER COMMIT)
 .env
+.env.*
+*.env
 !.env.example
+backend/.env
+
+# Local Storage & Uploads
+uploads/
+backend/uploads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Test and coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
 
 # IDE / Editor files
 .vscode/

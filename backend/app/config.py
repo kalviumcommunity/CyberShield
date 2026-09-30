@@ -38,10 +38,13 @@ class Settings(BaseSettings):
     def sync_database_url(self) -> str:
         """
         Constructs and returns the database connection URL.
-        Automatically uses psycopg2 driver for PostgreSQL.
+        Automatically converts postgres:// or postgresql:// to postgresql+psycopg2://
+        for seamless cloud deployment compatibility (Render, Railway, Heroku).
         """
         url = self.DATABASE_URL or f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        if url.startswith("postgresql://"):
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
         return url
 
