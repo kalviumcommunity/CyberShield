@@ -1,6 +1,9 @@
 import os
 import uuid
-import fitz  # PyMuPDF
+try:
+    import pymupdf as fitz
+except ImportError:
+    import fitz  # Fallback for older environments
 import docx
 from fastapi import UploadFile
 
