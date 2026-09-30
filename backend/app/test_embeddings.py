@@ -137,7 +137,6 @@ def test_embeddings_integration_suite():
     print("[OK] Returned 400 for unchunked document.")
 
     print("\n=== All Day 5 Embedding Tests Passed Successfully! ===")
-    return True
 
 
 if __name__ == "__main__":

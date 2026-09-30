@@ -64,7 +64,6 @@ CyberShield/
     ├── railway.json                           # Railway deployment configuration
     ├── render.yaml                            # Render Infrastructure-as-Code Blueprint
     ├── requirements.txt                       # Locked dependencies
-    ├── README.md                              # Backend local documentation
     ├── uploads/                               # Local document storage directory (git-ignored)
     └── app/
         ├── config.py                          # Pydantic BaseSettings & DB URL normalizer

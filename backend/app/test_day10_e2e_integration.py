@@ -244,10 +244,12 @@ def run_day10_e2e_tests():
     print("\n" + "=" * 80)
     print("      ALL DAY 10 E2E BACKEND INTEGRATION TESTS PASSED SUCCESSFULLY!     ")
     print("=" * 80)
-    return True
+
+
+def test_day10_e2e_integration():
+    """Pytest entrypoint for Day 10 E2E integration test suite."""
+    run_day10_e2e_tests()
 
 
 if __name__ == "__main__":
-    success = run_day10_e2e_tests()
-    if not success:
-        sys.exit(1)
+    run_day10_e2e_tests()

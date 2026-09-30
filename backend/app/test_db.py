@@ -27,9 +27,7 @@ def test_database_connection():
 
         expected_tables = {"users", "documents", "document_chunks", "alerts", "mitigation_results"}
         missing = expected_tables - set(tables)
-        if missing:
-            print(f"[ERROR] Missing expected tables: {missing}")
-            return False
+        assert not missing, f"Missing expected tables: {missing}"
 
         print("[OK] All required core tables are present:")
         for table in sorted(expected_tables):
@@ -37,13 +35,10 @@ def test_database_connection():
             print(f"  - Table '{table}': {cols}")
 
         print("\n=== Database Test Completed Successfully ===")
-        return True
     except Exception as e:
         print(f"[ERROR] Database test failed: {e}")
-        return False
+        raise
 
 
 if __name__ == "__main__":
-    success = test_database_connection()
-    if not success:
-        sys.exit(1)
+    test_database_connection()

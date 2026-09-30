@@ -159,10 +159,7 @@ def test_document_processing_suite():
     print(f"[OK] Returned 404 for non-existent document.")
 
     print("\n=== All Day 3 Tests Passed Successfully! ===")
-    return True
 
 
 if __name__ == "__main__":
-    success = test_document_processing_suite()
-    if not success:
-        sys.exit(1)
+    test_document_processing_suite()

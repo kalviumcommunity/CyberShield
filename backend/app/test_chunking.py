@@ -159,12 +159,9 @@ def test_chunking_integration_suite():
     print(f"[OK] Returned 400 for empty document content.")
 
     print("\n=== All Day 4 Chunking Tests Passed Successfully! ===")
-    return True
 
 
 if __name__ == "__main__":
     test_text_cleaning_unit()
     test_chunking_unit()
-    success = test_chunking_integration_suite()
-    if not success:
-        sys.exit(1)
+    test_chunking_integration_suite()
