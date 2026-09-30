@@ -23,6 +23,12 @@ from app.schemas.rag import (
     MitigationAnswerRequest,
     MitigationAnswerResponse,
 )
+from app.schemas.auth import (
+    UserRegister,
+    UserLogin,
+    UserResponse,
+    TokenResponse,
+)
 
 __all__ = [
     "HealthCheckResponse",
@@ -39,4 +45,8 @@ __all__ = [
     "MitigationSearchResponse",
     "MitigationAnswerRequest",
     "MitigationAnswerResponse",
+    "UserRegister",
+    "UserLogin",
+    "UserResponse",
+    "TokenResponse",
 ]

@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Document, DocumentChunk, DocumentType
+from app.dependencies import get_current_user, require_admin
+from app.models import Document, DocumentChunk, DocumentType, User
 from app.schemas.document import (
     DocumentChunkResponse,
     DocumentEmbedResponse,
@@ -27,6 +28,9 @@ from app.services.embedding_service import (
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
+# Maximum allowed upload size (20 MB)
+MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
+
 
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
@@ -34,9 +38,11 @@ async def upload_document(
     document_type: str = Form(..., description="Document type: threat_intelligence, incident_runbook, or vulnerability_advisory"),
     title: Optional[str] = Form(None, description="Optional document title"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     """
     Upload a document (PDF, DOCX, TXT), extract plain text content, and save metadata to PostgreSQL.
+    Admin role required.
     """
     if not file.filename or not file.filename.strip():
         raise HTTPException(
@@ -60,7 +66,21 @@ async def upload_document(
             detail=f"Invalid document_type '{document_type}'. Allowed types are: {', '.join(valid_types)}",
         )
 
-    # 3. Save uploaded file to local disk (uploads/)
+    # 3. Validate file size
+    try:
+        file.file.seek(0, 2)
+        file_size = file.file.tell()
+        file.file.seek(0)
+    except Exception:
+        file_size = 0
+
+    if file_size > MAX_FILE_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File exceeds maximum allowed size of {MAX_FILE_SIZE_BYTES // (1024 * 1024)}MB.",
+        )
+
+    # 4. Save uploaded file to local disk (uploads/)
     try:
         saved_file_path, safe_filename = await save_uploaded_file(file)
     except Exception as e:
@@ -69,7 +89,7 @@ async def upload_document(
             detail=f"Failed to save uploaded file: {str(e)}",
         )
 
-    # 4. Extract text from saved file
+    # 5. Extract text from saved file
     try:
         ext = get_file_extension(file.filename)
         extracted_text = extract_text(saved_file_path, ext)
@@ -81,7 +101,7 @@ async def upload_document(
             detail=f"Text extraction failed: {str(e)}",
         )
 
-    # 5. Store document record in PostgreSQL
+    # 6. Store document record in PostgreSQL
     doc_title = title.strip() if title and title.strip() else file.filename
     doc_enum_type = DocumentType(document_type)
 
@@ -90,6 +110,7 @@ async def upload_document(
         document_type=doc_enum_type,
         file_name=file.filename,
         file_path=saved_file_path,
+        uploaded_by=current_user.id,
         content=extracted_text,
     )
     db.add(new_doc)
@@ -108,6 +129,7 @@ async def upload_document(
         title=new_doc.title,
         file_name=new_doc.file_name,
         file_path=new_doc.file_path,
+        uploaded_by=new_doc.uploaded_by,
         content=new_doc.content,
         created_at=new_doc.created_at,
     )
@@ -118,10 +140,12 @@ def process_document_chunks(
     document_id: int,
     force: bool = Query(False, description="Set to true to force re-processing and overwrite existing chunks"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     """
     Cleans extracted document text, splits it into sequential chunks (500-800 words),
     and stores the resulting chunks in the DocumentChunk database table.
+    Admin role required.
     """
     # 1. Fetch document from database
     doc = db.query(Document).filter(Document.id == document_id).first()
@@ -189,10 +213,12 @@ def generate_document_embeddings(
     document_id: int,
     force: bool = Query(False, description="Set to true to force re-generating vector embeddings"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     """
     Generates 384-dimensional semantic embeddings for all chunks of a document
     using SentenceTransformer ('all-MiniLM-L6-v2').
+    Admin role required.
     """
     # 1. Check if document exists
     doc = db.query(Document).filter(Document.id == document_id).first()
@@ -260,7 +286,11 @@ def generate_document_embeddings(
 
 
 @router.get("/{document_id}/chunks", response_model=List[DocumentChunkResponse])
-def get_document_chunks(document_id: int, db: Session = Depends(get_db)):
+def get_document_chunks(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Retrieve all processed text chunks for a given document.
     """
@@ -288,6 +318,7 @@ def get_all_documents(
     limit: int = 100,
     document_type: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Retrieve list of uploaded documents with metadata and extracted text length.
@@ -319,7 +350,11 @@ def get_all_documents(
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document_by_id(document_id: int, db: Session = Depends(get_db)):
+def get_document_by_id(
+    document_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Retrieve document details and full extracted text by document ID.
     """

@@ -18,6 +18,7 @@ class DocumentUploadResponse(BaseModel):
     title: str = Field(..., description="Title of the document")
     file_name: str = Field(..., description="Original filename saved")
     file_path: str = Field(..., description="Local path where document file is stored")
+    uploaded_by: Optional[int] = Field(None, description="ID of uploading user")
     content: Optional[str] = Field(None, description="Extracted plain text content")
     created_at: datetime = Field(..., description="Upload timestamp")
 

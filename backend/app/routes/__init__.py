@@ -1,9 +1,10 @@
 """
 API Routes Package
 """
-from app.routes import health, documents, search, mitigation
+from app.routes import auth, documents, health, mitigation, search
 
 __all__ = [
+    "auth",
     "health",
     "documents",
     "search",
