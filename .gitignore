@@ -60,6 +60,13 @@ htmlcov/
 *.swp
 *.swo
 
+# Frontend build / dependency artifacts
+node_modules/
+dist/
+
+# Local environment files
+.env
+
 # OS files
 .DS_Store
 Thumbs.db
