@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: cybershield_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: cybershield_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cybershield_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # CyberShield FastAPI Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cybershield_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: "CyberShield Threat Intelligence API"
+      APP_ENV: "production"
+      DEBUG: "false"
+      HOST: "0.0.0.0"
+      PORT: "8000"
+      DATABASE_URL: "postgresql://postgres:postgres_password@db:5432/cybershield_db"
+      ALLOWED_ORIGINS: "*"
+      JWT_SECRET_KEY: "cybershield-super-secret-jwt-key-2026-production-ready-384"
+      JWT_ALGORITHM: "HS256"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
