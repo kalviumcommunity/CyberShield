@@ -39,6 +39,10 @@ venv.bak/
 !.env.example
 backend/.env
 
+# Frontend build / dependency artifacts
+node_modules/
+dist/
+
 # Local Storage & Uploads
 uploads/
 backend/uploads/
@@ -59,13 +63,6 @@ htmlcov/
 .idea/
 *.swp
 *.swo
-
-# Frontend build / dependency artifacts
-node_modules/
-dist/
-
-# Local environment files
-.env
 
 # OS files
 .DS_Store
